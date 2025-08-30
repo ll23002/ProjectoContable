@@ -1,14 +1,15 @@
-Paso 1:
-instalar requirements.txt
+## Instalar requirements.txt
+```bash
+  pip install -r requirements.txt
+```
 
-Paso 2:
 ## Documentación de Base de Datos
 
 ---
 
 ## 📋 Índice
 - [🎯 Descripción General](#-descripción-general)
-- [🗃️ Tablas del Sistema](#️-tablas-del-sistema)
+- [🗃️ Tablas del Sistema](#️-tablas)
 - [🔢 Secuencias](#-secuencias)
 - [👁️ Vistas](#️-vistas)
 - [⚡ Funciones](#-funciones)
