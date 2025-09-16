@@ -5,6 +5,7 @@
       <w>descripcion</w>
       <w>justificacion</w>
       <w>transaccion</w>
+      <w>viewcode</w>
     </words>
   </dictionary>
 </component>
