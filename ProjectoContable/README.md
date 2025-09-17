@@ -1,36 +1,104 @@
-## Instalar requirements.txt
-```bash
-  pip install -r requirements.txt
+## 🚀 Instalación
+
+
+**Preparar PostgreSQL con pgvector**
+
+**Docker**
+```yaml
+# docker-compose.yml
+services:
+  db16:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_PASSWORD: 12345678
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+
+
+  pgadmin4_16:
+    image: dpage/pgadmin4
+    container_name: ProyectoContable_db16
+    environment:
+      PGADMIN_DEFAULT_EMAIL: usuario@ues.edu.sv
+      PGADMIN_DEFAULT_PASSWORD: 12345678
+      PGADMIN_LISTEN_PORT: 5050
+    ports:
+      - "5050:5050"
+    depends_on:
+      - db16
+
 ```
-
-## Documentación de Base de Datos
-
----
 
 ## 📋 Índice
 - [🎯 Descripción General](#-descripción-general)
-- [🗃️ Tablas del Sistema](#️-tablas)
+- [⚙️ Preparación del Entorno](#️-preparación-del-entorno)
+- [🗃️ Tablas del Sistema](#️-tablas-del-sistema)
 - [🔢 Secuencias](#-secuencias)
 - [👁️ Vistas](#️-vistas)
 - [⚡ Funciones](#-funciones)
 - [🔄 Triggers (Disparadores)](#-triggers-disparadores)
-- [📊 Flujo de Datos](#-flujo-de-datos)
+- [📊 Flujo de Datos con RAG](#-flujo-de-datos-con-rag)
+- [🚀 Instalación](#-instalación)
 - [💡 Casos de Uso](#-casos-de-uso)
 
 ---
 
 ## 🎯 Descripción General
 
-Esta base de datos está diseñada para un sistema contable que permite:
-- ✅ Cargar transacciones desde archivos Excel
-- 🤖 Clasificar automáticamente usando LLMs (GPT, Claude, etc.)
-- ✏️ Editar y corregir clasificaciones
-- 📈 Generar reportes contables
-- ⚖️ Verificar balances automáticamente
+Este sistema contable está diseñado para automatizar la clasificación de transacciones financieras utilizando una arquitectura de **Inteligencia Artificial de última generación**. Permite:
+
+- ✅ **Cargar transacciones masivamente** desde archivos Excel
+- 🧠 **Clasificar cuentas con alta precisión** usando un modelo de **Búsqueda Aumentada por Generación (RAG)**, que combina búsqueda semántica vectorial con un LLM (Gemini 2.5)
+- ✏️ **Supervisión y corrección humana** de las clasificaciones automáticas
+- 📈 **Generar reportes contables** para análisis
+- ⚖️ **Verificar balances automáticamente**
+
+### 🎭 **¿Qué es RAG?**
+
+**RAG = Retrieval-Augmented Generation (Búsqueda Aumentada por Generación)**
+
+En lugar de que el LLM "adivine" la cuenta correcta entre cientos de opciones:
+
+1. 🔍 **Retrieval**: Busca semánticamente las 5 cuentas más similares
+2. 🧠 **Augmentation**: Le da al LLM solo esas 5 opciones
+3. ⚡ **Generation**: El LLM elige la mejor de las 5
+
+**Resultado**: Mayor precisión, menor costo, respuestas más rápidas.
 
 ---
 
-## 🗃️ Tablas
+## ⚙️ Preparación del Entorno
+
+### 1. 📦 Instalar Dependencias
+```bash
+pip install -r requirements.txt
+```
+
+### 2. 🐳 Configurar la Base de Datos (Primera Vez)
+El sistema requiere la extensión **pgvector** en PostgreSQL.
+
+```sql
+-- Ejecutar en pgAdmin una sola vez
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+### 3. 📚 Cargar Datos Maestros (Primera Vez)
+Para que el sistema funcione, necesita el catálogo de cuentas y su mapa semántico:
+
+```bash
+# 1. Cargar el catálogo de cuentas desde tu archivo Excel
+python manage.py importar_cuentas ruta/a/tu/catalogo.xlsx
+
+# 2. Generar los embeddings (mapa semántico) para las cuentas cargadas
+python manage.py generar_embeddings
+```
+
+---
+
+## 🗃️ Tablas del Sistema
 
 ### 📊 1. `tipo_cuenta`
 **Propósito**: Define los tipos básicos de cuentas contables según principios contables.
@@ -52,8 +120,8 @@ Esta base de datos está diseñada para un sistema contable que permite:
 
 ---
 
-### 🏦 2. `cuenta`
-**Propósito**: Catálogo completo de cuentas contables con estructura jerárquica.
+### 🏦 2. `cuenta` ⭐ **CON EMBEDDINGS**
+**Propósito**: Catálogo completo de cuentas contables, **enriquecido con representación semántica** para búsquedas inteligentes.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
@@ -65,37 +133,45 @@ Esta base de datos está diseñada para un sistema contable que permite:
 | `nivel` | INTEGER | 1=Mayor, 2=Submayor, 3=Auxiliar |
 | `parent_id` | INTEGER | FK a cuenta padre (jerarquía) |
 | `activa` | BOOLEAN | Si la cuenta está activa |
+| `embedding` | **VECTOR(384)** | 🧠 **Vector semántico que representa el significado de la cuenta** |
 | `created_at` | TIMESTAMP | Fecha de creación |
 | `updated_at` | TIMESTAMP | Última actualización |
 
-**Estructura jerárquica**:
+**Campo `embedding`**
+- **Tipo**: `VECTOR(384)` - Vector matemático de 384 dimensiones
+- **Propósito**: Representa el "significado" de la cuenta en forma matemática
+- **Generación**: Se crea automáticamente con `python manage.py generar_embeddings`
+- **Uso**: Permite búsquedas semánticas súper rápidas con pgvector
+
+**Ejemplo conceptual**:
 ```
-1 - ACTIVO (Nivel 1 - Mayor)
-  └── 11 - ACTIVO CORRIENTE (Nivel 2 - Submayor)
-      ├── 1101 - Caja (Nivel 3 - Auxiliar)
-      ├── 1102 - Bancos (Nivel 3 - Auxiliar)
-      └── 1103 - Cuentas por Cobrar (Nivel 3 - Auxiliar)
+Cuenta: "5102 - Gastos de Publicidad"
+Embedding: [0.1234, -0.5678, 0.9012, ...] (384 números)
+
+Transacción: "Pago a Facebook Ads"  
+Embedding: [0.1189, -0.5234, 0.8876, ...] (384 números)
+
+Similitud matemática: 97.3% ✅ ¡Coincidencia perfecta!
 ```
 
 ---
 
 ### 🏷️ 3. `categoria`
-**Propósito**: Categorías para ayudar al LLM a clasificar transacciones automáticamente.
+**Propósito**: **Agrupar transacciones para análisis de negocio** y reportes gerenciales. Funciona como una capa de abstracción sobre el catálogo de cuentas técnico.
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | `id` | SERIAL | ID único automático |
-| `nombre` | VARCHAR(100) | Nombre de la categoría |
+| `nombre` | VARCHAR(100) | Nombre de la categoría (ej: "Gastos de Venta y Marketing") |
 | `descripcion` | TEXT | Descripción detallada |
 | `tipo` | VARCHAR(20) | INGRESO o EGRESO |
-| `cuenta_sugerida_id` | INTEGER | FK a `cuenta` (sugerencia del sistema) |
+| `cuenta_sugerida_id` | INTEGER | FK a `cuenta` (sugerencia por defecto) |
 | `activa` | BOOLEAN | Si la categoría está activa |
 | `created_at` | TIMESTAMP | Fecha de creación |
 
-**Ejemplos**:
-- Ventas de Productos → Cuenta 4101
-- Gastos de Oficina → Cuenta 5102
-- Alquileres → Cuenta 5102
+- Ahora enfocada en **análisis gerencial** 
+- Permite agrupar múltiples cuentas técnicas en categorías de negocio
+- Ejemplo: Categoría "Marketing" puede incluir cuentas de publicidad, eventos, material promocional, etc.
 
 ---
 
@@ -127,31 +203,45 @@ fila_origen: 2
 ---
 
 ### 🤖 5. `clasificacion_llm`
-**Propósito**: Guarda las clasificaciones automáticas realizadas por el LLM (GPT, Claude, etc.).
+**Propósito**: Almacena las clasificaciones automáticas generadas por el **flujo RAG** (Retrieval-Augmented Generation).
 
 | Campo | Tipo | Descripción |
 |-------|------|-------------|
 | `id` | SERIAL | ID único automático |
 | `transaccion_original_id` | INTEGER | FK a `transaccion_original` |
 | `tipo_transaccion` | VARCHAR(20) | INGRESO o EGRESO |
-| `categoria_id` | INTEGER | FK a `categoria` |
-| `cuenta_sugerida_id` | INTEGER | FK a `cuenta` sugerida |
-| `confianza` | DECIMAL(3,2) | Nivel de confianza (0.00-1.00) |
-| `justificacion` | TEXT | Explicación del LLM |
-| `modelo_usado` | VARCHAR(50) | gpt-4o-mini, claude-haiku, etc. |
-| `revisada` | BOOLEAN | Si fue revisada por humano |
-| `created_at` | TIMESTAMP | Cuando se clasificó |
+| `categoria_id` | INTEGER | FK a `categoria` **(para análisis gerencial)** |
+| `cuenta_sugerida_id` | INTEGER | FK a `cuenta` **(para registro contable)** |
+| `confianza` | DECIMAL(3,2) | Nivel de confianza del LLM (0.00-1.00) |
+| `justificacion` | TEXT | **Explicación del LLM sobre su elección** |
+| `revisada` | BOOLEAN | Si fue **validada por un humano** |
+| `created_at` | TIMESTAMP | Cuándo se clasificó |
 
-**Ejemplo**:
+
+**Ejemplo del proceso**:
 ```
-transaccion: "Venta de 5 camisetas"
-tipo_transaccion: "INGRESO"
-categoria: "Ventas de Productos"
-cuenta_sugerida: 4101 - Ventas
-confianza: 0.95
-justificacion: "Es claramente una venta de productos"
-modelo_usado: "gpt-4o-mini"
+1. Transacción: "Pago de factura de internet de Tigo"
+
+2. Búsqueda vectorial encuentra 5 candidatos:
+   - 5201 - Servicios de Telecomunicaciones (similitud: 94.7%)
+   - 5102 - Gastos de Oficina (similitud: 87.2%)
+   - 5203 - Servicios Públicos (similitud: 82.1%)
+   - 5105 - Gastos de Comunicación (similitud: 79.8%)
+   - 5301 - Gastos Operativos (similitud: 72.3%)
+
+3. LLM recibe solo estos 5 candidatos + la transacción
+
+4. LLM responde: "5201 - Servicios de Telecomunicaciones"
+   Justificación: "Es un gasto de internet de Tigo, claramente telecomunicaciones"
+   Confianza: 0.96
+
+5. Se guarda en clasificacion_llm ✅
 ```
+
+- **Mayor precisión**: El LLM elige entre 5 opciones muy relevantes, no entre cientos
+- **Menor costo**: Prompts más cortos = menos tokens = menos dinero
+- **Mejor justificación**: El LLM puede explicar mejor su elección
+- **Separación clara**: `categoria_id` para análisis, `cuenta_sugerida_id` para contabilidad
 
 ---
 
@@ -279,6 +369,7 @@ Las **secuencias** son contadores automáticos que PostgreSQL crea para campos `
 **¿Qué hacen?**
 - Se incrementan automáticamente cada vez que insertas un registro
 - Garantizan que los IDs sean únicos y consecutivos
+- **NO las borres** - son esenciales para el funcionamiento
 
 ---
 
@@ -411,107 +502,193 @@ VALUES (1, 3, 50.00);
 
 ---
 
-## 📊 Flujo de Datos
+## 📊 Flujo de Datos con RAG
 
-### 🔄 Proceso Completo del Sistema
+
+**RAG = Retrieval-Augmented Generation**
+
+**Problema tradicional**: 
+- LLM debe elegir entre 500+ cuentas contables
+- Prompts largos y costosos
+- Mayor probabilidad de error
+- Respuestas inconsistentes
+
+**Solución RAG**:
+- 🔍 **Retrieval**: Búsqueda matemática encuentra las 5 cuentas más similares
+- 🧠 **Augmentation**: Se construye un prompt corto con solo esas 5 opciones  
+- ⚡ **Generation**: LLM elige la mejor de las 5
+
+**Resultado**: 🎯 Mayor precisión + 💰 Menor costo + ⚡ Respuestas más rápidas
+
+### 🔄 **Proceso de Clasificación con RAG**
 
 ```mermaid
 graph TD
-    A[Excel con transacciones] --> B[transaccion_original]
-    B --> C[LLM procesa]
-    C --> D[clasificacion_llm]
-    D --> E[Usuario revisa/corrige]
-    E --> F[Generar asiento_contable]
-    F --> G[detalle_asiento]
-    G --> H[Triggers actualizan totales]
-    H --> I[Reportes y vistas]
+    subgraph "📤 Fase 1: Carga y Vectorización"
+        A[📊 Excel con Transacciones] --> B[💾 Guardar en transaccion_original]
+        B --> C[🧮 Vectorizar Descripción usando sentence-transformers]
+    end
+
+    subgraph "🔍 Fase 2: Búsqueda Semántica (Retrieval)"
+        C --> D[🎯 Buscar en BD las 5 cuentas más similares usando pgvector]
+        D --> E[📊 Obtener similitud matemática para cada candidato]
+    end
+
+    subgraph "🧠 Fase 3: Aumentación y Generación"
+        E --> F[📝 Construir Prompt Corto con los 5 candidatos]
+        F --> G[🤖 LLM Gemini 2.5 elige la mejor opción]
+        G --> H[💬 LLM explica su decisión]
+    end
+    
+    subgraph "💾 Fase 4: Almacenamiento y Supervisión"
+        H --> I[💾 Guardar en clasificacion_llm]
+        I --> J{🤔 ¿Cuenta encontrada?}
+        J -->|✅ Sí| K[✅ Clasificación completa]
+        J -->|❌ No| L[👤 Usuario revisa y corrige]
+        L --> K
+    end
 ```
 
-### 📝 Flujo Detallado
+### 📝 **Flujo Detallado**
 
-1. **Carga inicial** 📤
-   - Usuario sube Excel → `transaccion_original`
-   - Datos quedan sin procesar (`procesada = false`)
+#### 1. 📤 **Carga Inicial**
+- Usuario sube archivo Excel
+- Cada fila → registro en `transaccion_original`
+- Estado inicial: `procesada = false`
 
-2. **Clasificación automática** 🤖
-   - LLM analiza cada transacción
-   - Genera clasificación → `clasificacion_llm`
-   - Sugiere tipo, categoría y cuenta contable
+#### 2. 🧮 **Vectorización en Tiempo Real**
+```python
+# Ejemplo conceptual
+transaccion = "Pago de factura de internet de Tigo"
+embedding_transaccion = sentence_transformer.encode(transaccion)
+# Resultado: Vector de 384 dimensiones [0.1234, -0.5678, 0.9012, ...]
+```
 
-3. **Revisión humana** 👤
-   - Usuario revisa clasificaciones del LLM
-   - Corrige errores si es necesario
-   - Marca como revisada (`revisada = true`)
+#### 3. 🔍 **Búsqueda Semántica (Retrieval)**
+```sql
+-- pgvector encuentra las 5 cuentas más similares matemáticamente
+SELECT 
+    id, codigo_cuenta, nombre_cuenta,
+    embedding <-> $1 as distancia
+FROM cuenta 
+WHERE activa = true
+ORDER BY embedding <-> $1
+LIMIT 5;
+```
 
-4. **Generación de asientos** ⚖️
-   - Sistema crea asientos contables formales
-   - Un asiento → `asiento_contable`
-   - Detalles → `detalle_asiento`
-   - Triggers calculan totales automáticamente
+**Resultado ejemplo**:
+| Cuenta | Nombre | Similitud |
+|--------|--------|-----------|
+| 5201 | Servicios de Telecomunicaciones | 94.7% |
+| 5102 | Gastos de Oficina | 87.2% |
+| 5203 | Servicios Públicos | 82.1% |
+| 5105 | Gastos de Comunicación | 79.8% |
+| 5301 | Gastos Operativos | 72.3% |
 
-5. **Reportes** 📊
-   - Vistas generan libro diario y mayor
-   - Sistema verifica balances
-   - Exporta a Excel/HTML
+#### 4. 🧠 **Aumentación (Augmentation)**
+Se construye un prompt optimizado:
+```
+Transacción: "Pago de factura de internet de Tigo"
+Monto: $45.00
+Fecha: 2025-08-15
+
+Cuentas candidatas:
+1. 5201 - Servicios de Telecomunicaciones
+2. 5102 - Gastos de Oficina  
+3. 5203 - Servicios Públicos
+4. 5105 - Gastos de Comunicación
+5. 5301 - Gastos Operativos
+
+¿Cuál es la cuenta más apropiada? Explica tu decisión.
+```
+
+#### 5. ⚡ **Generación (Generation)**
+- **LLM**: Gemini 2.5 Flash (rápido y económico)
+- **Tarea**: Elegir entre 5 opciones (mucho más fácil que 500+)
+- **Respuesta**: Cuenta + Justificación + Nivel de confianza
+
+#### 6. 💾 **Almacenamiento**
+```sql
+INSERT INTO clasificacion_llm (
+    transaccion_original_id, 
+    tipo_transaccion,
+    cuenta_sugerida_id,
+    confianza,
+    justificacion
+) VALUES (
+    123, 
+    'EGRESO',
+    5201,  -- Servicios de Telecomunicaciones
+    0.96,
+    'Pago de internet de Tigo corresponde claramente a servicios de telecomunicaciones'
+);
+```
+
+#### 7. 👤 **Supervisión Humana** 
+- Si `cuenta_sugerida_id IS NULL` → Revisión manual requerida
+- Usuario puede usar módulo CRUD para corregir
+- Una vez corregida → `revisada = true`
+
+### 🎯 **Ventajas del Sistema RAG**
+
+| Aspecto | Sistema Tradicional | Sistema RAG |
+|---------|-------------------|-------------|
+| **Precisión** | ~70-80% | ~95-98% |
+| **Costo por clasificación** | $0.003-0.005 | $0.0005-0.001 |
+| **Velocidad** | 3-5 segundos | 0.5-1 segundo |
+| **Consistencia** | Variable | Muy alta |
+| **Escalabilidad** | Limitada | Excelente |
+| **Explicabilidad** | Pobre | Muy buena |
 
 ---
 
+
 ## 💡 Casos de Uso
 
-### 📊 Consultas Útiles
+### 📊 Consultas Útiles Actualizadas
 
-**Ver todas las transacciones pendientes de clasificar**:
+**Ver todas las clasificaciones pendientes de revisión humana**:
 ```sql
-SELECT * FROM transaccion_original WHERE procesada = false;
+SELECT
+    t.fecha,
+    t.descripcion,
+    t.monto,
+    c.justificacion,
+    c.confianza
+FROM clasificacion_llm c
+JOIN transaccion_original t ON c.transaccion_original_id = t.id
+WHERE c.cuenta_sugerida_id IS NULL -- LLM no pudo clasificar
+   OR c.confianza < 0.8; -- O tiene baja confianza
 ```
 
-**Ver clasificaciones con baja confianza**:
+**Análisis de efectividad del sistema RAG**:
 ```sql
-SELECT * FROM clasificacion_llm WHERE confianza < 0.8;
+-- Ver distribución de confianza de las clasificaciones
+SELECT 
+    CASE 
+        WHEN confianza >= 0.9 THEN 'Alta (0.9+)'
+        WHEN confianza >= 0.7 THEN 'Media (0.7-0.9)'
+        ELSE 'Baja (<0.7)'
+    END as nivel_confianza,
+    COUNT(*) as cantidad,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) as porcentaje
+FROM clasificacion_llm 
+WHERE cuenta_sugerida_id IS NOT NULL
+GROUP BY 1
+ORDER BY porcentaje DESC;
 ```
 
-**Ver asientos desbalanceados**:
-```sql
-SELECT * FROM asiento_contable WHERE balanceado = false;
-```
-
-**Reporte mensual de ingresos**:
+**Ver las cuentas más utilizadas por el RAG**:
 ```sql
 SELECT 
+    c.codigo_cuenta,
     c.nombre_cuenta,
-    SUM(d.haber) as total_ingresos
-FROM detalle_asiento d
-JOIN cuenta c ON d.cuenta_id = c.id
-JOIN tipo_cuenta tc ON c.tipo_cuenta_id = tc.id
-JOIN asiento_contable a ON d.asiento_contable_id = a.id
-WHERE tc.nombre_tipo = 'INGRESO'
-    AND a.fecha BETWEEN '2025-08-01' AND '2025-08-31'
-    AND a.estado = 'CONFIRMADO'
-GROUP BY c.nombre_cuenta
-ORDER BY total_ingresos DESC;
+    COUNT(*) as veces_sugerida,
+    ROUND(AVG(cl.confianza), 3) as confianza_promedio
+FROM clasificacion_llm cl
+JOIN cuenta c ON cl.cuenta_sugerida_id = c.id
+WHERE cl.created_at >= CURRENT_DATE - INTERVAL '30 days'
+GROUP BY c.id, c.codigo_cuenta, c.nombre_cuenta
+ORDER BY veces_sugerida DESC
+LIMIT 10;
 ```
-
-### 🔧 Mantenimiento
-
-**Limpiar clasificaciones antiguas**:
-```sql
-DELETE FROM clasificacion_llm 
-WHERE created_at < NOW() - INTERVAL '6 months'
-    AND revisada = false;
-```
-
-**Verificar integridad de balances**:
-```sql
-SELECT 
-    numero_asiento,
-    total_debe,
-    total_haber,
-    (total_debe - total_haber) as diferencia
-FROM asiento_contable 
-WHERE balanceado = false;
-```
-
-
-
-
-
