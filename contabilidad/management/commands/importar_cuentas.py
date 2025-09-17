@@ -1,16 +1,38 @@
 import pandas as pd
 from django.core.management.base import BaseCommand
 from contabilidad.models import Cuenta, TipoCuenta
-from django.utils import timezone  # Importamos timezone para corregir la advertencia
+from django.utils import timezone
 
 
 class Command(BaseCommand):
+    """
+    Comando para importar el catálogo de cuentas desde un archivo XLSX.
+
+    Este comando procesa un archivo XLSX que contiene información sobre cuentas contables
+    y las guarda en la base de datos, asignándoles su tipo, nivel y jerarquía.
+    """
     help = 'Importa el catálogo de cuentas desde un archivo XLSX.'
 
     def add_arguments(self, parser):
+        """
+        Agrega los argumentos necesarios para ejecutar el comando.
+
+        Args:
+            parser (ArgumentParser): El analizador de argumentos para el comando.
+        """
         parser.add_argument('file_path', type=str, help='La ruta del archivo XLSX a importar.')
 
     def handle(self, *args, **kwargs):
+        """
+        Ejecuta el comando para importar las cuentas desde el archivo XLSX.
+
+        Args:
+            *args: Argumentos posicionales.
+            **kwargs: Argumentos con nombre, incluyendo la ruta del archivo.
+
+        Returns:
+            None
+        """
         file_path = kwargs['file_path']
         self.stdout.write(self.style.SUCCESS(f'Iniciando la importación desde "{file_path}"...'))
 
@@ -25,24 +47,21 @@ class Command(BaseCommand):
         df['codigo_len'] = df['CODIGO_LIMPIO'].str.len()
         df = df.sort_values(by='codigo_len').reset_index(drop=True)
 
-        # --- MEJORA 1: Diccionario con nombre y naturaleza ---
         tipos_base = {
             '1': ('ACTIVO', 'DEUDORA'),
             '2': ('PASIVO', 'ACREEDORA'),
             '3': ('PATRIMONIO', 'ACREEDORA'),
             '4': ('INGRESO', 'ACREEDORA'),
             '5': ('EGRESO', 'DEUDORA'),
-            '6': ('CUENTAS LIQUIDADORAS', 'DEUDORA'),  # Asumiendo naturaleza deudora por defecto
-            '7': ('CUENTAS DE ORDEN', 'DEUDORA')  # Asumiendo naturaleza deudora por defecto
+            '6': ('CUENTAS LIQUIDADORAS', 'DEUDORA'),
+            '7': ('CUENTAS DE ORDEN', 'DEUDORA')
         }
 
-        # --- MEJORA 2: Bucle que guarda también la naturaleza ---
         for codigo, (nombre, naturaleza) in tipos_base.items():
             TipoCuenta.objects.get_or_create(
                 nombre_tipo=nombre,
                 defaults={'naturaleza': naturaleza}
             )
-        # --------------------------------------------------------
 
         for index, row in df.iterrows():
             codigo = row['CODIGO_LIMPIO']
@@ -53,7 +72,6 @@ class Command(BaseCommand):
 
             primer_digito = codigo[0]
             try:
-                # Obtenemos solo el nombre del tipo de cuenta para la búsqueda
                 nombre_tipo_a_buscar = tipos_base[primer_digito][0]
                 tipo_cuenta_obj = TipoCuenta.objects.get(nombre_tipo=nombre_tipo_a_buscar)
             except (KeyError, TipoCuenta.DoesNotExist):
@@ -97,7 +115,7 @@ class Command(BaseCommand):
                     'nivel': nivel,
                     'parent': parent_obj,
                     'activa': True,
-                    'updated_at': timezone.now()  # Corregimos la advertencia de zona horaria
+                    'updated_at': timezone.now()
                 }
             )
 
