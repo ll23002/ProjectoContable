@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>contabilidad.views &#8212; ProjectoContable  documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=5929fcd5"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for contabilidad.views</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework.views</span><span class="w"> </span><span class="kn">import</span> <span class="n">APIView</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework.response</span><span class="w"> </span><span class="kn">import</span> <span class="n">Response</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rest_framework</span><span class="w"> </span><span class="kn">import</span> <span class="n">status</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransaccionOriginal</span><span class="p">,</span> <span class="n">ClasificacionLlm</span><span class="p">,</span> <span class="n">Categoria</span><span class="p">,</span> <span class="n">Cuenta</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.llm_service</span><span class="w"> </span><span class="kn">import</span> <span class="n">clasificar_transaccion</span>
+
+
+<div class="viewcode-block" id="CargarExcelView">
+<a class="viewcode-back" href="../../contabilidad.html#contabilidad.views.CargarExcelView">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">CargarExcelView</span><span class="p">(</span><span class="n">APIView</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vista para cargar un archivo Excel y procesar las transacciones contenidas en él.</span>
+
+<span class="sd">    Esta vista permite cargar un archivo Excel, leer sus filas y procesar cada transacción</span>
+<span class="sd">    utilizando un modelo LLM para clasificarla automáticamente.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="CargarExcelView.post">
+<a class="viewcode-back" href="../../contabilidad.html#contabilidad.views.CargarExcelView.post">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Maneja la solicitud POST para cargar y procesar un archivo Excel.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            request (Request): La solicitud HTTP que contiene el archivo Excel.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            Response: Una respuesta HTTP con el resultado del procesamiento.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            Exception: Si ocurre un error durante el procesamiento del archivo.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">archivo_excel</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">FILES</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;file&#39;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">archivo_excel</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Response</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="s2">&quot;No se ha proporcionado ningún archivo.&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_400_BAD_REQUEST</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># Leer el archivo Excel en un DataFrame de pandas</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_excel</span><span class="p">(</span><span class="n">archivo_excel</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                <span class="c1"># Crear una nueva transacción original en la base de datos</span>
+                <span class="n">transaccion</span> <span class="o">=</span> <span class="n">TransaccionOriginal</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                    <span class="n">fecha</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;Fecha&#39;</span><span class="p">],</span>
+                    <span class="n">descripcion</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;Descripción&#39;</span><span class="p">],</span>
+                    <span class="n">monto</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;Monto&#39;</span><span class="p">],</span>
+                    <span class="n">moneda</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="s1">&#39;Moneda&#39;</span><span class="p">],</span>
+                    <span class="n">procesada</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                    <span class="n">archivo_origen</span><span class="o">=</span><span class="n">archivo_excel</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                    <span class="n">fila_origen</span><span class="o">=</span><span class="n">index</span> <span class="o">+</span> <span class="mi">2</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Clasificar la transacción utilizando el servicio LLM</span>
+                <span class="n">resultado_json</span> <span class="o">=</span> <span class="n">clasificar_transaccion</span><span class="p">(</span><span class="n">transaccion</span><span class="o">.</span><span class="n">descripcion</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">resultado_json</span><span class="p">:</span>
+                    <span class="n">datos_clasificacion</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">resultado_json</span><span class="p">)</span>
+
+                    <span class="n">categoria_obj</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="n">cuenta_obj</span> <span class="o">=</span> <span class="kc">None</span>
+
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># Buscar la categoría sugerida por el LLM</span>
+                        <span class="n">nombre_categoria</span> <span class="o">=</span> <span class="n">datos_clasificacion</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;categoria&#39;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">nombre_categoria</span><span class="p">:</span>
+                            <span class="n">categoria_obj</span> <span class="o">=</span> <span class="n">Categoria</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">nombre__iexact</span><span class="o">=</span><span class="n">nombre_categoria</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+                    <span class="k">except</span> <span class="n">Categoria</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;La categoría &#39;</span><span class="si">{</span><span class="n">nombre_categoria</span><span class="si">}</span><span class="s2">&#39; sugerida por el LLM no existe.&quot;</span><span class="p">)</span>
+
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># Buscar la cuenta sugerida por el LLM</span>
+                        <span class="n">codigo_cuenta</span> <span class="o">=</span> <span class="n">datos_clasificacion</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;cuenta_sugerida&#39;</span><span class="p">)</span>
+                        <span class="k">if</span> <span class="n">codigo_cuenta</span><span class="p">:</span>
+                            <span class="n">cuenta_obj</span> <span class="o">=</span> <span class="n">Cuenta</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">codigo_cuenta</span><span class="o">=</span><span class="n">codigo_cuenta</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="n">Cuenta</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;La cuenta &#39;</span><span class="si">{</span><span class="n">codigo_cuenta</span><span class="si">}</span><span class="s2">&#39; sugerida por el LLM no existe.&quot;</span><span class="p">)</span>
+
+                    <span class="c1"># Crear una nueva clasificación basada en los datos del LLM</span>
+                    <span class="n">ClasificacionLlm</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+                        <span class="n">transaccion_original</span><span class="o">=</span><span class="n">transaccion</span><span class="p">,</span>
+                        <span class="n">tipo_transaccion</span><span class="o">=</span><span class="n">datos_clasificacion</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;tipo_transaccion&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">upper</span><span class="p">(),</span>
+                        <span class="n">categoria</span><span class="o">=</span><span class="n">categoria_obj</span><span class="p">,</span>
+                        <span class="n">cuenta_sugerida</span><span class="o">=</span><span class="n">cuenta_obj</span><span class="p">,</span>
+                        <span class="n">confianza</span><span class="o">=</span><span class="n">datos_clasificacion</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;confianza&#39;</span><span class="p">),</span>
+                        <span class="n">justificacion</span><span class="o">=</span><span class="n">datos_clasificacion</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;justificacion&#39;</span><span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="c1"># Marcar la transacción como procesada</span>
+                    <span class="n">transaccion</span><span class="o">.</span><span class="n">procesada</span> <span class="o">=</span> <span class="kc">True</span>
+                    <span class="n">transaccion</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+
+            <span class="k">return</span> <span class="n">Response</span><span class="p">({</span><span class="s2">&quot;mensaje&quot;</span><span class="p">:</span> <span class="s2">&quot;Datos cargados y clasificados exitosamente.&quot;</span><span class="p">},</span> <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_201_CREATED</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Manejar errores durante el procesamiento</span>
+            <span class="k">return</span> <span class="n">Response</span><span class="p">({</span><span class="s2">&quot;error&quot;</span><span class="p">:</span> <span class="sa">f</span><span class="s2">&quot;Ocurrió un error al procesar el archivo: </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">},</span>
+                            <span class="n">status</span><span class="o">=</span><span class="n">status</span><span class="o">.</span><span class="n">HTTP_500_INTERNAL_SERVER_ERROR</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">ProjectoContable</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+<p class="caption" role="heading"><span class="caption-text">Contenidos:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../contabilidad.html">Documentación de mi_app</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 8.2.3</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

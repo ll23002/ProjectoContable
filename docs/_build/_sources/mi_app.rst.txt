@@ -1,0 +1,17 @@
+Documentación de mi_app
+=======================
+
+Módulo de Vistas
+----------------
+.. automodule:: mi_app.views
+   :members:
+
+Módulo de Modelos
+-----------------
+.. automodule:: mi_app.models
+   :members:
+
+Módulo de Formularios
+---------------------
+.. automodule:: mi_app.forms
+   :members:

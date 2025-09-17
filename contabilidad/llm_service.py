@@ -10,6 +10,9 @@ from contabilidad.models import Cuenta
 
 load_dotenv()
 
+# Se carga el modelo 'all-MiniLM-L6-v2' de SentenceTransformer.
+# Convierte la descripción de la transacción en un
+# vector numérico (embedding) que capture su significado semántico.
 try:
     print("Cargando el modelo de SentenceTransformer (puede tardar)...")
     embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -20,6 +23,34 @@ except Exception as e:
 
 
 def clasificar_transaccion(descripcion: str):
+    """
+    Implementa un patrón de RAG (Retrieval-Augmented Generation)
+    para maximizar la precisión y relevancia de la clasificación:
+
+    1.  **Fase de Recuperación (Retrieval):** La descripción de la transacción
+        es codificada en un embedding por el modelo SentenceTransformer. Este
+        embedding se usa para ejecutar una búsqueda de similitud semántica (L2Distance)
+        contra los vectores de las cuentas en la base de datos, recuperando
+        las 5 candidatas más probables.
+
+    2.  **Fase de Generación Aumentada (Augmented Generation):** Un prompt
+        detallado, que incluye la descripción original y las 5 cuentas recuperadas,
+        es enviado al modelo Gemini. Esto obliga al modelo a basar su razonamiento
+        en un conjunto de datos relevante y controlado, quien finalmente genera
+        la clasificación y justificación en un formato JSON estructurado.
+
+    Args:
+        descripcion (str): Descripción de la transacción a clasificar.
+
+    Returns:
+        str: Un string con formato JSON que contiene la clasificación, incluyendo
+             tipo de transacción, categoría, cuenta sugerida, nivel de
+             confianza y una justificación textual.
+
+    Raises:
+        Exception: Si el modelo de embeddings no está disponible.
+        ValueError: Si no se encuentra la clave API en el archivo .env.
+    """
     if not embedding_model:
         raise Exception("El modelo de embeddings no está disponible.")
 
