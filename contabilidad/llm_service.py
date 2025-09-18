@@ -22,7 +22,7 @@ except Exception as e:
     print(f"ERROR: No se pudo cargar el modelo de SentenceTransformer: {e}")
 
 
-def clasificar_transaccion(descripcion: str):
+def clasificar_transaccion(descripcion: str, precomputed_embedding=None):
     """
     Implementa un patrón de RAG (Retrieval-Augmented Generation)
     para maximizar la precisión y relevancia de la clasificación:
@@ -61,7 +61,11 @@ def clasificar_transaccion(descripcion: str):
 
         client = genai.Client(api_key=api_key)
 
-        transaccion_embedding = embedding_model.encode(descripcion)
+        if precomputed_embedding is not None:
+            transaccion_embedding = precomputed_embedding
+        else:
+            transaccion_embedding = embedding_model.encode(descripcion)
+
 
         cuentas_similares = Cuenta.objects.order_by(
             L2Distance('embedding', transaccion_embedding)
