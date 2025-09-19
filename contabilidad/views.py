@@ -31,7 +31,7 @@ class CargarExcelView(APIView):
                     moneda=row['Moneda'],
                     procesada=False,
                     archivo_origen=archivo_excel.name,
-                    fila_origen=index + 2
+                    fila_origen=index + 2 # +2 para compensar el encabezado y el índice base 0
                 )
                 transacciones_a_crear.append(transaccion)
 
@@ -40,24 +40,19 @@ class CargarExcelView(APIView):
             descripciones = [t.descripcion for t in transacciones_a_crear]
             embeddings_de_transacciones = embedding_model.encode(descripciones, show_progress_bar=True)
 
-            # --- PASO 2: Ejecución Concurrente de Llamadas a la API ---
             clasificaciones_a_crear = []
 
-            # Usamos un ThreadPoolExecutor para hacer las llamadas en paralelo
             with ThreadPoolExecutor(max_workers=10) as executor:
-                # Creamos un futuro para cada llamada a la API
                 futuros = {
                     executor.submit(clasificar_transaccion, trans.descripcion, emb): trans
                     for trans, emb in zip(transacciones_a_crear, embeddings_de_transacciones)
                 }
 
-                # Procesamos los resultados a medida que van llegando
-                for futuro in as_completed(futuros):
+                for futuro in as_completed(futuros):#itera sobre los futuros a medida que se completan
                     transaccion = futuros[futuro]
                     try:
                         resultado_json = futuro.result()
                         if resultado_json:
-                            # La lógica de procesar cada resultado es la misma
                             datos_clasificacion = json.loads(resultado_json)
                             categoria_obj = None
                             cuenta_obj = None
@@ -69,13 +64,12 @@ class CargarExcelView(APIView):
                                         cuenta_obj = Cuenta.objects.get(codigo_cuenta=codigo_limpio)
                                     except Cuenta.DoesNotExist:
                                         cuenta_obj = Cuenta.objects.filter(
-                                            codigo_cuenta__startswith=codigo_limpio).first()
+                                            codigo_cuenta__startswith=codigo_limpio).first()# Intenta obtener una cuenta que comience con el código limpio
 
                             nombre_categoria = datos_clasificacion.get('categoria')
                             if nombre_categoria:
                                 categoria_obj = Categoria.objects.filter(nombre__iexact=nombre_categoria).first()
 
-                            # En lugar de crearla, la añadimos a una lista
                             clasificaciones_a_crear.append(
                                 ClasificacionLlm(
                                     transaccion_original=transaccion,
@@ -90,11 +84,9 @@ class CargarExcelView(APIView):
                     except Exception as exc:
                         print(f'La transacción {transaccion.id} generó un error: {exc}')
 
-            # --- PASO 3: Guardado Masivo en la Base de Datos ---
             if clasificaciones_a_crear:
                 ClasificacionLlm.objects.bulk_create(clasificaciones_a_crear)
 
-            # Actualizamos el estado 'procesada' de las transacciones que tuvieron éxito
             transacciones_exitosas = [c.transaccion_original for c in clasificaciones_a_crear]
             if transacciones_exitosas:
                 TransaccionOriginal.objects.bulk_update(transacciones_exitosas, ['procesada'])
