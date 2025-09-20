@@ -15,7 +15,7 @@ load_dotenv()
 # vector numérico (embedding) que capture su significado semántico.
 try:
     print("Cargando el modelo de SentenceTransformer (puede tardar)...")
-    embedding_model = SentenceTransformer('all-MiniLM-L6-v2')
+    embedding_model = SentenceTransformer('jinaai/jina-embeddings-v2-base-es')
     print("¡Modelo de SentenceTransformer cargado!")
 except Exception as e:
     embedding_model = None

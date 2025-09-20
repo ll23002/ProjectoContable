@@ -88,7 +88,7 @@ class Cuenta(models.Model):
     activa = models.BooleanField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
     updated_at = models.DateTimeField(blank=True, null=True)
-    embedding = VectorField(dimensions=384, blank=True, null=True)#almacenar vectores de 384 dimensiones
+    embedding = VectorField(dimensions=768, blank=True, null=True)#almacenar vectores de 768 dimensiones
 
     class Meta:
         db_table = 'cuenta'
