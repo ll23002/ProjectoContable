@@ -10,7 +10,7 @@ from contabilidad.models import Cuenta
 
 load_dotenv()
 
-# Se carga el modelo 'all-MiniLM-L6-v2' de SentenceTransformer.
+# Se carga el modelo 'jina-embeddings-v4' de SentenceTransformer.
 # Convierte la descripción de la transacción en un
 # vector numérico (embedding) que capture su significado semántico.
 try:
