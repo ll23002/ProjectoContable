@@ -15,7 +15,7 @@ load_dotenv()
 # vector numérico (embedding) que capture su significado semántico.
 try:
     print("Cargando el modelo de SentenceTransformer (puede tardar)...")
-    embedding_model = SentenceTransformer('jinaai/jina-embeddings-v2-base-es')
+    embedding_model = SentenceTransformer('jinaai/jina-embeddings-v4', trust_remote_code=True)
     print("¡Modelo de SentenceTransformer cargado!")
 except Exception as e:
     embedding_model = None
@@ -64,7 +64,7 @@ def clasificar_transaccion(descripcion: str, precomputed_embedding=None):
         if precomputed_embedding is not None:
             transaccion_embedding = precomputed_embedding
         else:
-            transaccion_embedding = embedding_model.encode(descripcion)
+            transaccion_embedding = embedding_model.encode(descripcion, task ="retrieval")
 
 
         cuentas_similares = Cuenta.objects.order_by(

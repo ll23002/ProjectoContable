@@ -38,7 +38,7 @@ class CargarExcelView(APIView):
             TransaccionOriginal.objects.bulk_create(transacciones_a_crear)
 
             descripciones = [t.descripcion for t in transacciones_a_crear]
-            embeddings_de_transacciones = embedding_model.encode(descripciones, show_progress_bar=True)
+            embeddings_de_transacciones = embedding_model.encode(descripciones, show_progress_bar=True, task = "retrieval")
 
             clasificaciones_a_crear = []
 

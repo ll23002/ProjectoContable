@@ -28,8 +28,8 @@ class Command(BaseCommand):
         """
         self.stdout.write(self.style.SUCCESS('Iniciando la generación de embeddings...'))
 
-        self.stdout.write('Cargando modelo Jina ...')
-        model = SentenceTransformer('jinaai/jina-embeddings-v2-base-es')
+        self.stdout.write('Cargando modelo Jina v4...')
+        model = SentenceTransformer('jinaai/jina-embeddings-v4', trust_remote_code=True)
         self.stdout.write(self.style.SUCCESS('¡Modelo cargado!'))
 
         cuentas = Cuenta.objects.all()
@@ -45,7 +45,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f'Codificando {len(textos_a_codificar)} cuentas...')
 
-        embeddings = model.encode(textos_a_codificar, show_progress_bar=True)
+        embeddings = model.encode(textos_a_codificar, show_progress_bar=True, task ='retrieval')
 
         self.stdout.write('Guardando los embeddings en la base de datos...')
 
