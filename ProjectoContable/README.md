@@ -94,7 +94,6 @@ python manage.py generar_embeddings
 | `nombre_tipo` | VARCHAR(50) | Nombre del tipo (ACTIVO, PASIVO, etc.) |
 | `descripcion` | TEXT | Descripción detallada |
 | `naturaleza` | VARCHAR(10) | DEUDORA o ACREEDORA |
-| `created_at` | TIMESTAMP | Fecha de creación |
 
 **Datos iniciales**:
 - ACTIVO (DEUDORA) - Recursos de la empresa
@@ -115,12 +114,7 @@ python manage.py generar_embeddings
 | `nombre_cuenta` | VARCHAR(200)     | Nombre de la cuenta |
 | `descripcion` | TEXT             | Descripción detallada |
 | `tipo_cuenta_id` | INTEGER          | FK a `tipo_cuenta` |
-| `nivel` | INTEGER          | 1=Mayor, 2=Submayor, 3=Auxiliar |
-| `parent_id` | INTEGER          | FK a cuenta padre (jerarquía) |
-| `activa` | BOOLEAN          | Si la cuenta está activa |
 | `embedding` | **VECTOR(2048)** | 🧠 **Vector semántico que representa el significado de la cuenta** |
-| `created_at` | TIMESTAMP        | Fecha de creación |
-| `updated_at` | TIMESTAMP        | Última actualización |
 
 **Campo `embedding`**
 - **Tipo**: `VECTOR(2048)` - Vector matemático de 2048 dimensiones
@@ -138,25 +132,6 @@ Embedding: [0.1189, -0.5234, 0.8876, ...] (384 números)
 
 Similitud matemática: 97.3% 
 ```
-
----
-
-### 🏷️ 3. `categoria`
-**Propósito**: **Agrupar transacciones para análisis de negocio** y reportes gerenciales. Funciona como una capa de abstracción sobre el catálogo de cuentas técnico.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `id` | SERIAL | ID único automático |
-| `nombre` | VARCHAR(100) | Nombre de la categoría (ej: "Gastos de Venta y Marketing") |
-| `descripcion` | TEXT | Descripción detallada |
-| `tipo` | VARCHAR(20) | INGRESO o EGRESO |
-| `cuenta_sugerida_id` | INTEGER | FK a `cuenta` (sugerencia por defecto) |
-| `activa` | BOOLEAN | Si la categoría está activa |
-| `created_at` | TIMESTAMP | Fecha de creación |
-
-- Ahora enfocada en **análisis gerencial** 
-- Permite agrupar múltiples cuentas técnicas en categorías de negocio
-- Ejemplo: Categoría "Marketing" puede incluir cuentas de publicidad, eventos, material promocional, etc.
 
 ---
 
@@ -239,15 +214,11 @@ fila_origen: 2
 | `numero_asiento` | VARCHAR(20) | Número único (ASI-2025-001) |
 | `fecha` | DATE | Fecha del asiento |
 | `descripcion` | TEXT | Descripción del asiento |
-| `referencia` | VARCHAR(100) | Referencia externa |
 | `transaccion_original_id` | INTEGER | FK a `transaccion_original` |
 | `total_debe` | DECIMAL(15,2) | Suma total del DEBE |
 | `total_haber` | DECIMAL(15,2) | Suma total del HABER |
 | `balanceado` | BOOLEAN | Si DEBE = HABER |
-| `estado` | VARCHAR(20) | BORRADOR, CONFIRMADO, ANULADO |
-| `created_by` | VARCHAR(100) | Usuario que lo creó |
 | `created_at` | TIMESTAMP | Fecha de creación |
-| `updated_at` | TIMESTAMP | Última actualización |
 
 ---
 
@@ -307,30 +278,8 @@ Total DEBE: $50.00 = Total HABER: $50.00 ✅
 | `accion` | VARCHAR(20) | INSERT, UPDATE, DELETE |
 | `valores_anteriores` | JSONB | Valores antes del cambio |
 | `valores_nuevos` | JSONB | Valores después del cambio |
-| `usuario` | VARCHAR(100) | Usuario que hizo el cambio |
 | `timestamp` | TIMESTAMP | Cuándo ocurrió |
 
----
-
-### 10. `configuracion`
-**Propósito**: Configuraciones globales del sistema.
-
-| Campo | Tipo | Descripción |
-|-------|------|-------------|
-| `id` | SERIAL | ID único automático |
-| `clave` | VARCHAR(100) | Nombre de la configuración |
-| `valor` | TEXT | Valor de la configuración |
-| `descripcion` | TEXT | Descripción |
-| `tipo_dato` | VARCHAR(20) | STRING, NUMBER, BOOLEAN, JSON |
-| `updated_at` | TIMESTAMP | Última actualización |
-
-**Configuraciones incluidas**:
-```
-moneda_base: "USD"
-empresa_nombre: "Mi Empresa S.A. de C.V."
-llm_modelo: "gemini-2.5-flash"
-llm_confianza_minima: "0.7"
-```
 
 ---
 
@@ -342,14 +291,12 @@ Las **secuencias** son contadores automáticos que PostgreSQL crea para campos `
 |-----------|-------|-----------|
 | `tipo_cuenta_id_seq` | tipo_cuenta | Genera IDs únicos para tipos de cuenta |
 | `cuenta_id_seq` | cuenta | Genera IDs únicos para cuentas |
-| `categoria_id_seq` | categoria | Genera IDs únicos para categorías |
 | `transaccion_original_id_seq` | transaccion_original | Genera IDs únicos para transacciones |
 | `clasificacion_llm_id_seq` | clasificacion_llm | Genera IDs únicos para clasificaciones |
 | `asiento_contable_id_seq` | asiento_contable | Genera IDs únicos para asientos |
 | `detalle_asiento_id_seq` | detalle_asiento | Genera IDs únicos para detalles |
 | `periodo_contable_id_seq` | periodo_contable | Genera IDs únicos para períodos |
 | `auditoria_id_seq` | auditoria | Genera IDs únicos para auditoría |
-| `configuracion_id_seq` | configuracion | Genera IDs únicos para configuraciones |
 
 - Se incrementan automáticamente cada vez que insertas un registro
 - Garantizan que los IDs sean únicos y consecutivos
