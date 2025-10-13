@@ -303,13 +303,12 @@ Las **secuencias** son contadores automáticos que PostgreSQL crea para campos `
 - Son esenciales para el funcionamiento
 
 ---
-
 ## Vistas
 
 Las **vistas** son "tablas virtuales" que muestran datos de varias tablas combinadas:
 
 ### `vista_libro_diario`
-**Propósito**: Muestra todos los asientos contables como libro diario.
+**Propósito**: Muestra todos los asientos contables como libro diario en formato cronológico.
 
 **Campos mostrados**:
 - `numero_asiento` - Número del asiento
@@ -320,11 +319,13 @@ Las **vistas** son "tablas virtuales" que muestran datos de varias tablas combin
 - `detalle_descripcion` - Descripción específica del movimiento
 - `debe` - Monto en el debe
 - `haber` - Monto en el haber
-- `estado` - Estado del asiento
 
+**Ordenamiento**: Por fecha, ID de asiento y orden de detalle
+
+---
 
 ### `vista_libro_mayor`
-**Propósito**: Muestra el libro mayor con saldos acumulados por cuenta.
+**Propósito**: Muestra el libro mayor con saldos acumulados por cuenta, respetando la naturaleza contable.
 
 **Campos mostrados**:
 - `codigo_cuenta` - Código de la cuenta
@@ -335,13 +336,18 @@ Las **vistas** son "tablas virtuales" que muestran datos de varias tablas combin
 - `descripcion` - Descripción del movimiento
 - `debe` - Monto en el debe
 - `haber` - Monto en el haber
-- `saldo` - Saldo acumulado (calculado automáticamente)
+- `saldo` - Saldo acumulado calculado según naturaleza de cuenta
 
-**¿Caracterisiticas de vistas**
+**Cálculo del saldo**:
+- **Cuentas DEUDORAS**: `saldo = debe - haber` (acumulado)
+- **Cuentas ACREEDORAS**: `saldo = haber - debe` (acumulado)
+
+**Características de las vistas**:
 - ✅ Simplifican consultas complejas
 - ✅ Se actualizan automáticamente
 - ✅ Perfectas para reportes
 - ✅ No ocupan espacio adicional
+- ✅ Incluyen ordenamiento lógico incorporado
 
 ---
 
@@ -349,35 +355,32 @@ Las **vistas** son "tablas virtuales" que muestran datos de varias tablas combin
 
 Las **funciones** son código reutilizable que se ejecuta en la base de datos:
 
-### `actualizar_updated_at()`
-**Propósito**: Actualiza automáticamente el campo `updated_at` cuando se modifica un registro.
-
-**Ejemplo**
-```sql
--- Cada vez que actualizas un registro:
-UPDATE cuenta SET nombre_cuenta = 'Nuevo nombre' WHERE id = 1;
--- La función automáticamente pone updated_at = NOW()
-```
-
 ### `actualizar_totales_asiento()`
-**Propósito**: Recalcula automáticamente los totales de debe y haber en un asiento contable.
+**Propósito**: Recalcula y actualiza automáticamente los totales `total_debe`, `total_haber` y el estado `balanceado` de un asiento contable cada vez que se inserta, modifica o elimina una de sus líneas de detalle.
 
 **¿Qué hace?**
-1. Suma todos los valores DEBE del asiento
-2. Suma todos los valores HABER del asiento
-3. Actualiza `total_debe` y `total_haber`
-4. Marca `balanceado = true` si DEBE = HABER
+1. Identifica el asiento contable afectado por el cambio (funciona con INSERT, UPDATE y DELETE)
+2. Suma todos los valores de la columna `debe` para ese asiento
+3. Suma todos los valores de la columna `haber` para ese asiento
+4. Actualiza los campos `total_debe`, `total_haber` y `balanceado` en la tabla `asiento_contable`
+5. Determina si el asiento está balanceado (debe = haber)
+
+**Características técnicas**:
+- **Tipo de función**: TRIGGER
+- **Retorno**: NULL (no necesita retornar valor)
+- **Operaciones soportadas**: INSERT, UPDATE, DELETE
+- **Usa**: COALESCE para manejar valores NULL correctamente
 
 **Ejemplo**:
 ```sql
 -- Cuando agregas un detalle:
-INSERT INTO detalle_asiento (asiento_contable_id, cuenta_id, debe) 
-VALUES (1, 5, 100.00);
+INSERT INTO detalle_asiento (asiento_contable_id, cuenta_id, debe, orden) 
+VALUES (1, 5, 100.00, 1);
 
 -- La función automáticamente actualiza:
 -- total_debe = suma de todos los debe del asiento
 -- total_haber = suma de todos los haber del asiento
--- balanceado = (total_debe = total_haber)
+-- balanceado = true/false (total_debe = total_haber)
 ```
 
 ---
@@ -386,44 +389,45 @@ VALUES (1, 5, 100.00);
 
 Los **triggers** son "eventos automáticos" que se ejecutan cuando ocurre algo en la base de datos:
 
-### Triggers de Actualización de Timestamp
-**Se ejecutan**: ANTES de actualizar registros en ciertas tablas
+### Trigger de Totales de Asiento
+**Se ejecuta**: DESPUÉS de cualquier cambio en `detalle_asiento`
 
-| Trigger | Tabla | Cuándo se ejecuta |
-|---------|-------|------------------|
-| `trg_cuenta_updated_at` | cuenta | Antes de UPDATE |
-| `trg_asiento_updated_at` | asiento_contable | Antes de UPDATE |
-| `trg_configuracion_updated_at` | configuracion | Antes de UPDATE |
+| Trigger | Cuándo se ejecuta | Función ejecutada |
+|---------|------------------|-------------------|
+| `trg_detalle_totales_after_change` | Después de INSERT, UPDATE o DELETE | `actualizar_totales_asiento()` |
 
-**¿Qué hacen?**
-- Automáticamente ponen `updated_at = NOW()` 
-- Te olvidas de actualizar fechas manualmente
+**Mejoras en esta versión**:
+- ✅ **Un solo trigger** en lugar de tres separados (INSERT, UPDATE, DELETE)
+- ✅ Código más mantenible y eficiente
+- ✅ Lógica centralizada para todas las operaciones
+- ✅ Manejo correcto de NULL values con COALESCE
 
-### Triggers de Totales de Asiento
-**Se ejecutan**: DESPUÉS de cambios en `detalle_asiento`
-
-| Trigger | Cuándo se ejecuta |
-|---------|------------------|
-| `trg_detalle_totales_insert` | Después de INSERT |
-| `trg_detalle_totales_update` | Después de UPDATE |
-| `trg_detalle_totales_delete` | Después de DELETE |
-
-**¿Qué hacen?**
-- Recalculan automáticamente los totales del asiento padre
-- Mantienen siempre actualizado el balance
-- Garantizan integridad contable
+**¿Qué hace?**
+- Recalcula automáticamente los totales del asiento padre
+- Mantiene siempre actualizado el balance
+- Garantiza integridad contable sin intervención manual
+- Funciona para agregar, modificar o eliminar detalles
 
 **Ejemplo práctico**:
 ```sql
 -- 1. Tienes un asiento con total_debe = $100, total_haber = $100
 -- 2. Agregas un nuevo detalle:
-INSERT INTO detalle_asiento (asiento_contable_id, cuenta_id, debe) 
-VALUES (1, 3, 50.00);
+INSERT INTO detalle_asiento (asiento_contable_id, cuenta_id, debe, orden) 
+VALUES (1, 3, 50.00, 2);
 
 -- 3. El trigger automáticamente actualiza:
 --    total_debe = $150
 --    total_haber = $100  
 --    balanceado = false (porque no están iguales)
+
+-- 4. Agregas el contrapartida:
+INSERT INTO detalle_asiento (asiento_contable_id, cuenta_id, haber, orden) 
+VALUES (1, 4, 50.00, 3);
+
+-- 5. El trigger actualiza nuevamente:
+--    total_debe = $150
+--    total_haber = $150
+--    balanceado = true (ahora sí están iguales)
 ```
 
 ---
