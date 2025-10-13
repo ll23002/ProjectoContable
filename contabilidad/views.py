@@ -8,7 +8,7 @@ import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .models import TransaccionOriginal, ClasificacionLlm, Categoria, Cuenta
+from .models import TransaccionOriginal, ClasificacionLlm, Cuenta
 from .llm_service import clasificar_transaccion, embedding_model
 
 
@@ -66,15 +66,12 @@ class CargarExcelView(APIView):
                                         cuenta_obj = Cuenta.objects.filter(
                                             codigo_cuenta__startswith=codigo_limpio).first()# Intenta obtener una cuenta que comience con el código limpio
 
-                            nombre_categoria = datos_clasificacion.get('categoria')
-                            if nombre_categoria:
-                                categoria_obj = Categoria.objects.filter(nombre__iexact=nombre_categoria).first()
+
 
                             clasificaciones_a_crear.append(
                                 ClasificacionLlm(
                                     transaccion_original=transaccion,
                                     tipo_transaccion=datos_clasificacion.get('tipo_transaccion', '').upper(),
-                                    categoria=categoria_obj,
                                     cuenta_sugerida=cuenta_obj,
                                     confianza=datos_clasificacion.get('confianza'),
                                     justificacion=datos_clasificacion.get('justificacion')

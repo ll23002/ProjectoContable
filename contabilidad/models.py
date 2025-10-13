@@ -18,10 +18,7 @@ class AsientoContable(models.Model):
     total_debe = models.DecimalField(max_digits=15, decimal_places=2)
     total_haber = models.DecimalField(max_digits=15, decimal_places=2)
     balanceado = models.BooleanField(blank=True, null=True)
-    estado = models.CharField(max_length=20, blank=True, null=True)
-    created_by = models.CharField(max_length=100, blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = 'asiento_contable'
@@ -33,63 +30,31 @@ class Auditoria(models.Model):
     accion = models.CharField(max_length=20)
     valores_anteriores = models.JSONField(blank=True, null=True)
     valores_nuevos = models.JSONField(blank=True, null=True)
-    usuario = models.CharField(max_length=100, blank=True, null=True)
     timestamp = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = 'auditoria'
 
 
-class Categoria(models.Model):
-    nombre = models.CharField(unique=True, max_length=100)
-    descripcion = models.TextField(blank=True, null=True)
-    tipo = models.CharField(max_length=20)
-    cuenta_sugerida = models.ForeignKey('Cuenta', on_delete=models.CASCADE, blank=True, null=True)
-    activa = models.BooleanField(blank=True, null=True)
-    created_at = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        db_table = 'categoria'
-
 
 class ClasificacionLlm(models.Model):
     transaccion_original = models.ForeignKey('TransaccionOriginal', on_delete=models.CASCADE)
     tipo_transaccion = models.CharField(max_length=20)
-    categoria = models.ForeignKey(Categoria, on_delete=models.CASCADE, blank=True, null=True)
     cuenta_sugerida = models.ForeignKey('Cuenta', on_delete=models.CASCADE, blank=True, null=True)
     confianza = models.DecimalField(max_digits=3, decimal_places=2, blank=True, null=True)
     justificacion = models.TextField(blank=True, null=True)
-    modelo_usado = models.CharField(max_length=50, blank=True, null=True)
     revisada = models.BooleanField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = 'clasificacion_llm'
 
-
-class Configuracion(models.Model):
-    clave = models.CharField(unique=True, max_length=100)
-    valor = models.TextField(blank=True, null=True)
-    descripcion = models.TextField(blank=True, null=True)
-    tipo_dato = models.CharField(max_length=20, blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-
-    class Meta:
-        db_table = 'configuracion'
-
-
 class Cuenta(models.Model):
     codigo_cuenta = models.CharField(unique=True, max_length=20)
     nombre_cuenta = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
     tipo_cuenta = models.ForeignKey('TipoCuenta', on_delete=models.CASCADE)
-    nivel = models.IntegerField()
-    parent = models.ForeignKey('self', on_delete=models.CASCADE, blank=True, null=True)
-    activa = models.BooleanField(blank=True, null=True)
-    created_at = models.DateTimeField(blank=True, null=True)
-    updated_at = models.DateTimeField(blank=True, null=True)
-    embedding = VectorField(dimensions=2048, blank=True, null=True)#almacenar vectores de 768 dimensiones
-
+    embedding = VectorField(dimensions=2048, blank=True, null=True)#almacenar vectores de 2048 dimensiones
     class Meta:
         db_table = 'cuenta'
 
@@ -127,7 +92,6 @@ class TipoCuenta(models.Model):
     nombre_tipo = models.CharField(unique=True, max_length=50)
     descripcion = models.TextField(blank=True, null=True)
     naturaleza = models.CharField(max_length=10)
-    created_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         db_table = 'tipo_cuenta'
