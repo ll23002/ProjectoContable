@@ -396,11 +396,6 @@ Los **triggers** son "eventos automáticos" que se ejecutan cuando ocurre algo e
 |---------|------------------|-------------------|
 | `trg_detalle_totales_after_change` | Después de INSERT, UPDATE o DELETE | `actualizar_totales_asiento()` |
 
-**Mejoras en esta versión**:
-- ✅ **Un solo trigger** en lugar de tres separados (INSERT, UPDATE, DELETE)
-- ✅ Código más mantenible y eficiente
-- ✅ Lógica centralizada para todas las operaciones
-- ✅ Manejo correcto de NULL values con COALESCE
 
 **¿Qué hace?**
 - Recalcula automáticamente los totales del asiento padre
