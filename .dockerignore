@@ -1,0 +1,23 @@
+# Archivos de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Entornos virtuales
+venv/
+.venv/
+env/
+.env/
+
+# Archivos del IDE (JetBrains)
+.idea/
+.vscode/
+
+# Git
+.git/
+.gitignore
+
+# Archivos de Mac/Windows
+.DS_Store
+Thumbs.db

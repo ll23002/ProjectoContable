@@ -1,5 +1,5 @@
 """
-ASGI config for ProjectoContable project.
+ASGI config for Backend project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
