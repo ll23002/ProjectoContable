@@ -111,11 +111,8 @@ class Command(BaseCommand):
                 defaults={
                     'nombre_cuenta': nombre,
                     'descripcion': nombre,
-                    'tipo_cuenta': tipo_cuenta_obj,
-                    'nivel': nivel,
-                    'parent': parent_obj,
-                    'activa': True,
-                    'updated_at': timezone.now()
+                    'tipo_cuenta': tipo_cuenta_obj
+              
                 }
             )
 

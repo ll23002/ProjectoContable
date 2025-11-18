@@ -8,8 +8,8 @@ import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from .models import TransaccionOriginal, ClasificacionLlm, Cuenta
-from .llm_service import clasificar_transaccion, embedding_model
+from ..models import TransaccionOriginal, ClasificacionLlm, Cuenta
+from ..llm_service import clasificar_transaccion, embedding_model
 
 
 class CargarExcelView(APIView):
