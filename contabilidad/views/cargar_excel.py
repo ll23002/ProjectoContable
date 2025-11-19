@@ -7,7 +7,7 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from ..models import TransaccionOriginal, ClasificacionLlm, Cuenta
-from ..llm_service import clasificar_transaccion, embedding_model
+from ..llm_service import clasificar_transaccion, get_embedding_model
 
 
 class CargarExcelView(APIView):
@@ -20,6 +20,7 @@ class CargarExcelView(APIView):
         try:
             df = pd.read_excel(archivo_excel)
             df.dropna(subset=['Descripción'], inplace=True)
+            model = get_embedding_model()
             transacciones_a_crear = []
             for index, row in df.iterrows():
                 transaccion = TransaccionOriginal(
@@ -36,7 +37,7 @@ class CargarExcelView(APIView):
             TransaccionOriginal.objects.bulk_create(transacciones_a_crear)
 
             descripciones = [t.descripcion for t in transacciones_a_crear]
-            embeddings_de_transacciones = embedding_model.encode(descripciones, show_progress_bar=True, task = "retrieval")
+            embeddings_de_transacciones = model.encode(descripciones, show_progress_bar=True, task = "retrieval")
 
             clasificaciones_a_crear = []
 

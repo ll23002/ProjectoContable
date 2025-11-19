@@ -28,8 +28,8 @@ class Command(BaseCommand):
         """
         self.stdout.write(self.style.SUCCESS('Iniciando la generación de embeddings...'))
 
-        self.stdout.write('Cargando modelo Jina v2...')
-        model = SentenceTransformer('jinaai/jina-embeddings-v2-base-es', trust_remote_code=True)
+        self.stdout.write('Cargando modelo liviano...')
+        model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', trust_remote_code=True)
         self.stdout.write(self.style.SUCCESS('¡Modelo cargado!'))
 
         cuentas = Cuenta.objects.all()

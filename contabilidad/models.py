@@ -54,7 +54,7 @@ class Cuenta(models.Model):
     nombre_cuenta = models.CharField(max_length=200)
     descripcion = models.TextField(blank=True, null=True)
     tipo_cuenta = models.ForeignKey('TipoCuenta', on_delete=models.CASCADE)
-    embedding = VectorField(dimensions=768, blank=True, null=True)#almacenar vectores de 768 dimensiones
+    embedding = VectorField(dimensions=384, blank=True, null=True)#almacenar vectores de 384 dimensiones
     class Meta:
         db_table = 'cuenta'
 
