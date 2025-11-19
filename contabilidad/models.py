@@ -12,8 +12,8 @@ from pgvector.django import VectorField
 class AsientoContable(models.Model):
     numero_asiento = models.CharField(unique=True, max_length=20)
     fecha = models.DateField()
-    descripcion = models.TextField()
-    referencia = models.CharField(max_length=100, blank=True, null=True)
+    #descripcion = models.TextField()
+    #referencia = models.CharField(max_length=100, blank=True, null=True)
     transaccion_original = models.ForeignKey('TransaccionOriginal', on_delete=models.CASCADE, blank=True, null=True)
     total_debe = models.DecimalField(max_digits=15, decimal_places=2)
     total_haber = models.DecimalField(max_digits=15, decimal_places=2)

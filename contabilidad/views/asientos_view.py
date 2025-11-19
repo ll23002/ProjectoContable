@@ -15,8 +15,6 @@ class AsientosView(APIView):
     def post(self, request):
 
         numero_asiento = request.data.get('numero_asiento')
-        descripcion = request.data.get('descripcion')
-        referencia = request.data.get('referencia')
         transaccion_original_id = request.data.get('transaccion')
         fecha = request.data.get('fecha')  
         detalles = request.data.get('detalles')
@@ -68,8 +66,6 @@ class AsientosView(APIView):
             asiento = AsientoContable.objects.create(
                 numero_asiento=numero_asiento,
                 fecha=fecha,
-                descripcion=descripcion,
-                referencia=referencia,
                 transaccion_original=transaccion_original_obj,
                 total_debe=total_debe,
                 total_haber=total_haber,
