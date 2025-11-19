@@ -2,6 +2,7 @@ from django.urls import path, include
 from .views.cargar_excel import CargarExcelView
 from rest_framework.routers import DefaultRouter
 from .views.transacciones_view import TransaccionesViewSet
+from .views.asientos_view import AsientosView
 
 router = DefaultRouter()
 
@@ -11,5 +12,6 @@ router.register(r'transacciones', TransaccionesViewSet)
 
 urlpatterns = [
     path('cargar-excel/', CargarExcelView.as_view(), name='cargar_excel'),
+    path('asiento-contable/', AsientosView.as_view(), name='asiento-contable'),
     path('', include(router.urls)),
 ]
