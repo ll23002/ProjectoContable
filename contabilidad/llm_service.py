@@ -10,12 +10,10 @@ from contabilidad.models import Cuenta
 
 load_dotenv()
 
-# Se carga el modelo 'jina-embeddings-v4' de SentenceTransformer.
-# Convierte la descripción de la transacción en un
-# vector numérico (embedding) que capture su significado semántico.
+#Improvisando
 try:
     print("Cargando el modelo de SentenceTransformer (puede tardar)...")
-    embedding_model = SentenceTransformer('jinaai/jina-embeddings-v4', trust_remote_code=True)
+    embedding_model = SentenceTransformer('jinaai/jina-embeddings-v2-base-es', trust_remote_code=True)
     print("¡Modelo de SentenceTransformer cargado!")
 except Exception as e:
     embedding_model = None
