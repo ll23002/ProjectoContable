@@ -5,10 +5,6 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
-RUN apt-get update && \
-    apt-get install -y netcat-openbsd && \
-    rm -rf /var/lib/apt/lists/*
-
 RUN pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt .
