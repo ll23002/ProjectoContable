@@ -8,6 +8,8 @@ from ..models import TransaccionOriginal
 import datetime 
 from django.db import transaction
 from django.utils import timezone
+from rest_framework.decorators import api_view
+
 
 
 class AsientosView(APIView):
@@ -107,3 +109,47 @@ class AsientosView(APIView):
             "balanceado": asiento.balanceado,
             "detalles_insertados": len(detalles_a_insertar)
         }, status=201)
+    
+    @api_view(['GET'])
+    def filtrar_transacciones(request):
+        anio = request.GET.get('anio')
+        mes = request.GET.get('mes')
+        trimestre = request.GET.get('trimestre')
+
+        if (anio == None):
+            return Response({
+                'error': 'No se ha proporcionado año'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        queryset = TransaccionOriginal.objects.all()
+
+        if anio:
+            queryset = queryset.filter(fecha__year=anio)
+        if anio and mes:
+            queryset = queryset.filter(fecha__month=mes)
+
+        if anio and trimestre:
+            trimestre = int(trimestre)
+            if trimestre == 1:
+                queryset = queryset.filter(fecha__month__in=[1,2,3])
+            elif trimestre == 2:
+                queryset = queryset.filter(fecha__month__in=[4,5,6])
+            elif trimestre == 3:
+                queryset = queryset.filter(fecha__month__in=[7,8,9])
+            elif trimestre == 4:
+                queryset = queryset.filter(fecha__month__in=[10,11,12])
+
+        data = []
+        for t in queryset:
+            data.append({
+                "id": t.id,
+                "descripcion": t.descripcion,
+                "fecha": t.fecha,
+                "moneda":t.moneda,
+                "created_at":t.created_at
+            })
+
+        return Response({
+            "transacciones": data
+        })
+

@@ -16,5 +16,6 @@ router.register(r'cuentas', CuentasViewSet)
 urlpatterns = [
     path('cargar-excel/', CargarExcelView.as_view(), name='cargar_excel'),
     path('asiento-contable/', AsientosView.as_view(), name='asiento-contable'),
+    path('transacciones/filtrar/',AsientosView.filtrar_transacciones, name='filtrar_transacciones'),
     path('', include(router.urls)),
 ]
