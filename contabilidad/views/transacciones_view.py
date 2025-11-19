@@ -7,5 +7,5 @@ from ..serializers.transacciones_serializer import TransaccionOriginalSerializer
 from rest_framework.viewsets import ModelViewSet
 
 class TransaccionesViewSet(ModelViewSet):
-    queryset = TransaccionOriginal.objects.all()
+    queryset = TransaccionOriginal.objects.filter(procesada=True)
     serializer_class = TransaccionOriginalSerializer

@@ -8,16 +8,51 @@ from ..models import TransaccionOriginal
 import datetime 
 from django.db import transaction
 from django.utils import timezone
+from django.db.models import Max
+from datetime import date
+
+
 
 
 class AsientosView(APIView):
 
-    def post(self, request):
+    def _generar_numero_asiento(fecha: date) -> str:
+        año_actual = fecha.year
+        prefijo = f"{año_actual}"
 
-        numero_asiento = request.data.get('numero_asiento')
+        ultimo_asiento = AsientoContable.objects.filter(
+            numero_asiento__startswith=prefijo
+        ).aggregate(
+            max_num=Max('numero_asiento')
+        )['max_num']
+
+        if ultimo_asiento:
+            try:
+                ultimo_consecutivo = int(ultimo_asiento.split('-')[-1])
+            except (ValueError, IndexError):
+                ultimo_consecutivo = 0
+        else:
+            ultimo_consecutivo = 0
+
+        nuevo_consecutivo = ultimo_consecutivo + 1
+        nuevo_numero_asiento = f"{prefijo}-{str(nuevo_consecutivo).zfill(5)}"
+
+        return nuevo_numero_asiento
+
+
+
+
+
+
+    def post(self, request):
         transaccion_original_id = request.data.get('transaccion')
-        fecha = request.data.get('fecha')  
+        fecha = datetime.datetime.today().date()
         detalles = request.data.get('detalles')
+        try:
+            numero_asiento = self._generar_numero_asiento(fecha)
+        except Exception as e:
+            return Response({"error": f"Error al generar el número de asiento: {e}"}, status=500)
+
 
         if not detalles or len(detalles) == 0:
             return Response({"error": "Debe incluir al menos un detalle"}, status=400)
