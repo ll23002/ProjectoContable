@@ -10,48 +10,26 @@ from contabilidad.models import Cuenta
 
 load_dotenv()
 
-#Improvisando
-try:
-    print("Cargando el modelo de SentenceTransformer (puede tardar)...")
-    embedding_model = SentenceTransformer('jinaai/jina-embeddings-v2-base-es', trust_remote_code=True)
-    print("¡Modelo de SentenceTransformer cargado!")
-except Exception as e:
-    embedding_model = None
-    print(f"ERROR: No se pudo cargar el modelo de SentenceTransformer: {e}")
+_embedding_model = None
 
+def get_embedding_model():
+    """
+    Patrón Singleton para cargar el modelo solo cuando se necesita
+    y evitar que la aplicación explote al arrancar.
+    """
+    global _embedding_model
+    if _embedding_model is None:
+        try:
+            print("⏳ Cargando modelo ligero (MiniLM-L12)...")
+            # Modelo ligero de 384 dimensiones. Mucho más rápido y estable.
+            _embedding_model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2')
+            print("✅ ¡Modelo cargado en memoria!")
+        except Exception as e:
+            print(f"❌ ERROR FATAL cargando el modelo: {e}")
+            raise e
+    return _embedding_model
 
 def clasificar_transaccion(descripcion: str, precomputed_embedding=None):
-    """
-    Implementa un patrón de RAG (Retrieval-Augmented Generation)
-    para maximizar la precisión y relevancia de la clasificación:
-
-    1.  **Fase de Recuperación (Retrieval):** La descripción de la transacción
-        es codificada en un embedding por el modelo SentenceTransformer. Este
-        embedding se usa para ejecutar una búsqueda de similitud semántica (L2Distance)
-        contra los vectores de las cuentas en la base de datos, recuperando
-        las 5 candidatas más probables.
-
-    2.  **Fase de Generación Aumentada (Augmented Generation):** Un prompt
-        detallado, que incluye la descripción original y las 5 cuentas recuperadas,
-        es enviado al modelo Gemini. Esto obliga al modelo a basar su razonamiento
-        en un conjunto de datos relevante y controlado, quien finalmente genera
-        la clasificación y justificación en un formato JSON estructurado.
-
-    Args:
-        descripcion (str): Descripción de la transacción a clasificar.
-
-    Returns:
-        str: Un string con formato JSON que contiene la clasificación, incluyendo
-             tipo de transacción, categoría, cuenta sugerida, nivel de
-             confianza y una justificación textual.
-
-    Raises:
-        Exception: Si el modelo de embeddings no está disponible.
-        ValueError: Si no se encuentra la clave API en el archivo .env.
-    """
-    if not embedding_model:
-        raise Exception("El modelo de embeddings no está disponible.")
-
     try:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
@@ -62,6 +40,7 @@ def clasificar_transaccion(descripcion: str, precomputed_embedding=None):
         if precomputed_embedding is not None:
             transaccion_embedding = precomputed_embedding
         else:
+            embedding_model = get_embedding_model()
             transaccion_embedding = embedding_model.encode(descripcion, task ="retrieval")
 
 
