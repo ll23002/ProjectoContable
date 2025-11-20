@@ -9,6 +9,8 @@ import datetime
 from django.db import transaction
 from django.utils import timezone
 
+from ..serializers.asientos_serializer import AsientoContableSerializer
+
 
 class AsientosView(APIView):
     def post(self, request):
@@ -95,3 +97,9 @@ class AsientosView(APIView):
             "total_debe": str(asiento.total_debe),
             "total_haber": str(asiento.total_haber)
         }, status=201)
+
+    def get(self, request):
+        asientos = AsientoContable.objects.all().order_by('fecha', 'numero_asiento').prefetch_related(
+            'detalleasiento_set__cuenta')
+        serializer = AsientoContableSerializer(asientos, many=True)
+        return Response(serializer.data)
