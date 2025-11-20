@@ -55,11 +55,9 @@ class CargarExcelView(APIView):
                         resultado_json_raw = futuro.result()
 
                         if resultado_json_raw:
-                            # Limpieza de bloques de código Markdown que a veces manda Gemini
                             texto_limpio = resultado_json_raw.replace('```json', '').replace('```', '').strip()
                             datos_clasificacion = json.loads(texto_limpio)
 
-                            # Manejo de la nueva estructura "detalles"
                             detalles = datos_clasificacion.get('detalles', [])
                             explicacion = datos_clasificacion.get('explicacion', '')
 
@@ -67,32 +65,24 @@ class CargarExcelView(APIView):
                             tipo_inferido = 'PENDIENTE'
 
                             if detalles:
-                                # Asumimos que la primera cuenta en 'detalles' es la principal (Gasto/Ingreso)
-                                # y la segunda suele ser el Banco. Tomamos la primera.
                                 primer_detalle = detalles[0]
                                 cuenta_id = primer_detalle.get('cuenta_id')
 
-                                # Inferir tipo basado en donde está el monto
                                 debe = float(primer_detalle.get('debe', 0))
                                 if debe > 0:
-                                    tipo_inferido = 'EGRESO'  # Gasto aumenta al debe
+                                    tipo_inferido = 'EGRESO'
                                 else:
-                                    tipo_inferido = 'INGRESO'  # Ingreso aumenta al haber
+                                    tipo_inferido = 'INGRESO'
 
-                                # Buscar la cuenta por ID directo
                                 if cuenta_id and isinstance(cuenta_id, int):
                                     cuenta_obj = Cuenta.objects.filter(id=cuenta_id).first()
 
-                                # Si falla por ID, lógica de respaldo (opcional, si mandara códigos)
-                                # ...
-
-                            # Crear el objeto de clasificación (Sugerencia)
                             clasificaciones_a_crear.append(
                                 ClasificacionLlm(
                                     transaccion_original=transaccion,
                                     tipo_transaccion=tipo_inferido,
                                     cuenta_sugerida=cuenta_obj,
-                                    confianza=0.90,  # Valor hardcodeado o extraído si tu prompt lo devuelve
+                                    confianza=0.90,
                                     justificacion=explicacion,
                                     revisada=False
                                 )
@@ -104,7 +94,7 @@ class CargarExcelView(APIView):
             if clasificaciones_a_crear:
                 ClasificacionLlm.objects.bulk_create(clasificaciones_a_crear)
             return Response({
-                "mensaje": f"Se cargaron {len(transacciones_a_crear)} transacciones. {len(clasificaciones_a_crear)} fueron pre-clasificadas por IA."
+                "mensaje": f"Se cargaron {len(transacciones_a_crear)} transacciones. {len(clasificaciones_a_crear)} fueron clasificadas por IA"
             }, status=status.HTTP_201_CREATED)
 
         except Exception as e:

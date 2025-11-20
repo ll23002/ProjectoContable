@@ -2,7 +2,6 @@ import os
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
-
 from sentence_transformers import SentenceTransformer
 from pgvector.django import L2Distance
 
