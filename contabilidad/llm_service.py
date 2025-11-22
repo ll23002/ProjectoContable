@@ -38,9 +38,19 @@ def clasificar_transaccion(descripcion: str, monto: float, precomputed_embedding
             embedding_model = get_embedding_model()
             transaccion_embedding = embedding_model.encode(descripcion)
 
-        cuentas_similares = Cuenta.objects.order_by(
+        cuentas_similares = list(Cuenta.objects.filter(
+            permite_movimientos=True
+        ).order_by(
             L2Distance('embedding', transaccion_embedding)
-        )[:5]
+        )[:5])
+
+        if len(cuentas_similares) < 5:
+            needed = 5 - len(cuentas_similares)
+            excluded_ids = [c.id for c in cuentas_similares]
+            adicionales = list(Cuenta.objects.exclude(id__in=excluded_ids).order_by(
+                L2Distance('embedding', transaccion_embedding)
+            )[:needed])
+            cuentas_similares.extend(adicionales)
 
 
         cuenta_banco_default = Cuenta.objects.filter(nombre_cuenta__icontains="Bancos").first()

@@ -111,7 +111,8 @@ class Command(BaseCommand):
                 defaults={
                     'nombre_cuenta': nombre,
                     'descripcion': nombre,
-                    'tipo_cuenta': tipo_cuenta_obj
+                    'tipo_cuenta': tipo_cuenta_obj,
+                    'permite_movimientos': True
               
                 }
             )
@@ -120,5 +121,14 @@ class Command(BaseCommand):
                 self.stdout.write(f'  -> Creada: [{cuenta.codigo_cuenta}] {cuenta.nombre_cuenta}')
             else:
                 self.stdout.write(f'  -> Actualizada: [{cuenta.codigo_cuenta}] {cuenta.nombre_cuenta}')
+
+            if parent_obj:
+                if not cuenta.permite_movimientos:
+                    cuenta.permite_movimientos = True
+                    cuenta.save()
+
+                if parent_obj.permite_movimientos:
+                    parent_obj.permite_movimientos = False
+                    parent_obj.save()
 
         self.stdout.write(self.style.SUCCESS('¡Importación completada exitosamente!'))
